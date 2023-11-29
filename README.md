@@ -16,6 +16,12 @@ npm install
 npm run build
 ```
 
+### Run
+Serve the contents of 'build/apps/viewer/' and view with a web browser. To run locally with defaults:
+```bash
+npm run serve
+```
+
 
 
 
