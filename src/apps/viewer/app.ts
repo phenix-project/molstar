@@ -6,43 +6,35 @@
  */
 
 import { ANVILMembraneOrientation } from '../../extensions/anvil/behavior';
-import { Backgrounds } from '../../extensions/backgrounds';
 import { CellPack } from '../../extensions/cellpack';
 import { DnatcoNtCs } from '../../extensions/dnatco';
 import { G3DFormat, G3dProvider } from '../../extensions/g3d/format';
+import { Volseg, VolsegVolumeServerConfig } from '../../extensions/volumes-and-segmentations';
 import { GeometryExport } from '../../extensions/geo-export';
-import { MAQualityAssessment, QualityAssessmentPLDDTPreset, QualityAssessmentQmeanPreset } from '../../extensions/model-archive/quality-assessment/behavior';
+import { MAQualityAssessment } from '../../extensions/model-archive/quality-assessment/behavior';
+import { QualityAssessmentPLDDTPreset, QualityAssessmentQmeanPreset } from '../../extensions/model-archive/quality-assessment/behavior';
 import { QualityAssessment } from '../../extensions/model-archive/quality-assessment/prop';
 import { ModelExport } from '../../extensions/model-export';
 import { Mp4Export } from '../../extensions/mp4-export';
-import { MolViewSpec } from '../../extensions/mvs/behavior';
-import { loadMVS } from '../../extensions/mvs/load';
-import { MVSData } from '../../extensions/mvs/mvs-data';
 import { PDBeStructureQualityReport } from '../../extensions/pdbe';
 import { RCSBAssemblySymmetry, RCSBValidationReport } from '../../extensions/rcsb';
-import { RCSBAssemblySymmetryConfig } from '../../extensions/rcsb/assembly-symmetry/behavior';
-import { SbNcbrPartialCharges, SbNcbrPartialChargesPreset, SbNcbrPartialChargesPropertyProvider } from '../../extensions/sb-ncbr';
-import { Volseg, VolsegVolumeServerConfig } from '../../extensions/volumes-and-segmentations';
-import { wwPDBChemicalComponentDictionary } from '../../extensions/wwpdb/ccd/behavior';
-import { wwPDBStructConnExtensionFunctions } from '../../extensions/wwpdb/struct-conn';
 import { ZenodoImport } from '../../extensions/zenodo';
-import { SaccharideCompIdMapType } from '../../mol-model/structure/structure/carbohydrates/constants';
 import { Volume } from '../../mol-model/volume';
 import { DownloadStructure, PdbDownloadProvider } from '../../mol-plugin-state/actions/structure';
 import { DownloadDensity } from '../../mol-plugin-state/actions/volume';
 import { PresetTrajectoryHierarchy } from '../../mol-plugin-state/builder/structure/hierarchy-preset';
 import { PresetStructureRepresentations, StructureRepresentationPresetProvider } from '../../mol-plugin-state/builder/structure/representation-preset';
-import { BuiltInCoordinatesFormat } from '../../mol-plugin-state/formats/coordinates';
 import { DataFormatProvider } from '../../mol-plugin-state/formats/provider';
 import { BuiltInTopologyFormat } from '../../mol-plugin-state/formats/topology';
+import { BuiltInCoordinatesFormat } from '../../mol-plugin-state/formats/coordinates';
 import { BuiltInTrajectoryFormat } from '../../mol-plugin-state/formats/trajectory';
 import { BuildInVolumeFormat } from '../../mol-plugin-state/formats/volume';
 import { createVolumeRepresentationParams } from '../../mol-plugin-state/helpers/volume-representation-params';
 import { PluginStateObject } from '../../mol-plugin-state/objects';
 import { StateTransforms } from '../../mol-plugin-state/transforms';
 import { TrajectoryFromModelAndCoordinates } from '../../mol-plugin-state/transforms/model';
-import { PluginUIContext } from '../../mol-plugin-ui/context';
 import { createPluginUI } from '../../mol-plugin-ui/react18';
+import { PluginUIContext } from '../../mol-plugin-ui/context';
 import { DefaultPluginUISpec, PluginUISpec } from '../../mol-plugin-ui/spec';
 import { PluginCommands } from '../../mol-plugin/commands';
 import { PluginConfig } from '../../mol-plugin/config';
@@ -54,32 +46,57 @@ import { Asset } from '../../mol-util/assets';
 import { Color } from '../../mol-util/color';
 import '../../mol-util/polyfill';
 import { ObjectKeys } from '../../mol-util/type-helpers';
+import { SaccharideCompIdMapType } from '../../mol-model/structure/structure/carbohydrates/constants';
+import { Backgrounds } from '../../extensions/backgrounds';
+import { SbNcbrPartialCharges, SbNcbrPartialChargesPreset, SbNcbrPartialChargesPropertyProvider } from '../../extensions/sb-ncbr';
+import { wwPDBStructConnExtensionFunctions } from '../../extensions/wwpdb/struct-conn';
+import { wwPDBChemicalComponentDictionary } from '../../extensions/wwpdb/ccd/behavior';
 
+// Start import modifications
+import { Selection, SelectionQuery, debugQuery, QueryHelper, getLocationArray, queryFromLoci, StyleQuery, Ref, RefMap, DefaultParams, DefaultStyle, allSelectionQuery, stringDictionary } from './helpers';
+import { pdb1yjp } from './debug';
+import { Loci } from '../../mol-model/loci';
+import { EmptyLoci } from '../../mol-model/loci';
+import { Unit, StructureElement, StructureProperties as Props, Bond, StructureProperties, Structure } from '../../mol-model/structure';
+import { InitVolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
+import { VolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/behavior';
+import { StateSelection, StateTransform } from '../../mol-state';
+import { CreateVolumeStreamingInfo, CreateVolumeStreamingBehavior } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
+import { clearStructureOverpaint } from '../../mol-plugin-state/helpers/structure-overpaint';
+import { StructureComponentManager } from '../../mol-plugin-state/manager/structure/component';
+import { ParamDefinition } from '../../mol-util/param-definition';
+import { StructureQueryHelper } from '../../mol-plugin-state/helpers/structure-query';
+import { StructureComponent } from '../../mol-plugin-state/transforms/model';
+import { Representation } from '../../mol-repr/representation';
+import { Query } from '../../extensions/rcsb/graphql/types';
+import { PluginBehaviors } from '../../mol-plugin/behavior';
+import { Binding } from '../../mol-util/binding';
+import { Phenix } from './phenix';
+// End import modifications
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
-export { consoleStats, setDebugMode, setProductionMode, setTimingMode } from '../../mol-util/debug';
+export { setDebugMode, setProductionMode, setTimingMode, consoleStats } from '../../mol-util/debug';
 
 const CustomFormats = [
     ['g3d', G3dProvider] as const
 ];
 
 export const ExtensionMap = {
-    'volseg': PluginSpec.Behavior(Volseg),
-    'backgrounds': PluginSpec.Behavior(Backgrounds),
-    'cellpack': PluginSpec.Behavior(CellPack),
-    'dnatco-ntcs': PluginSpec.Behavior(DnatcoNtCs),
-    'pdbe-structure-quality-report': PluginSpec.Behavior(PDBeStructureQualityReport),
-    'rcsb-assembly-symmetry': PluginSpec.Behavior(RCSBAssemblySymmetry),
-    'rcsb-validation-report': PluginSpec.Behavior(RCSBValidationReport),
-    'anvil-membrane-orientation': PluginSpec.Behavior(ANVILMembraneOrientation),
-    'g3d': PluginSpec.Behavior(G3DFormat),
-    'model-export': PluginSpec.Behavior(ModelExport),
-    'mp4-export': PluginSpec.Behavior(Mp4Export),
-    'geo-export': PluginSpec.Behavior(GeometryExport),
-    'ma-quality-assessment': PluginSpec.Behavior(MAQualityAssessment),
-    'zenodo-import': PluginSpec.Behavior(ZenodoImport),
-    'sb-ncbr-partial-charges': PluginSpec.Behavior(SbNcbrPartialCharges),
-    'wwpdb-chemical-component-dictionary': PluginSpec.Behavior(wwPDBChemicalComponentDictionary),
-    'mvs': PluginSpec.Behavior(MolViewSpec),
+    // 'volseg': PluginSpec.Behavior(Volseg),
+    // 'backgrounds': PluginSpec.Behavior(Backgrounds),
+    // 'cellpack': PluginSpec.Behavior(CellPack),
+    // 'dnatco-ntcs': PluginSpec.Behavior(DnatcoNtCs),
+    // 'pdbe-structure-quality-report': PluginSpec.Behavior(PDBeStructureQualityReport),
+    // 'rcsb-assembly-symmetry': PluginSpec.Behavior(RCSBAssemblySymmetry),
+    // 'rcsb-validation-report': PluginSpec.Behavior(RCSBValidationReport),
+    // 'anvil-membrane-orientation': PluginSpec.Behavior(ANVILMembraneOrientation),
+    // 'g3d': PluginSpec.Behavior(G3DFormat),
+    // 'model-export': PluginSpec.Behavior(ModelExport),
+    // 'mp4-export': PluginSpec.Behavior(Mp4Export),
+    // 'geo-export': PluginSpec.Behavior(GeometryExport),
+    // 'ma-quality-assessment': PluginSpec.Behavior(MAQualityAssessment),
+    // 'zenodo-import': PluginSpec.Behavior(ZenodoImport),
+    // 'sb-ncbr-partial-charges': PluginSpec.Behavior(SbNcbrPartialCharges),
+    // 'wwpdb-chemical-component-dictionary': PluginSpec.Behavior(wwPDBChemicalComponentDictionary),
 };
 
 const DefaultViewerOptions = {
@@ -106,10 +123,10 @@ const DefaultViewerOptions = {
     powerPreference: PluginConfig.General.PowerPreference.defaultValue,
 
     viewportShowExpand: PluginConfig.Viewport.ShowExpand.defaultValue,
-    viewportShowControls: PluginConfig.Viewport.ShowControls.defaultValue,
+    viewportShowControls: false,
     viewportShowSettings: PluginConfig.Viewport.ShowSettings.defaultValue,
-    viewportShowSelectionMode: PluginConfig.Viewport.ShowSelectionMode.defaultValue,
-    viewportShowAnimation: PluginConfig.Viewport.ShowAnimation.defaultValue,
+    viewportShowSelectionMode: false,
+    viewportShowAnimation: false,
     viewportShowTrajectoryControls: PluginConfig.Viewport.ShowTrajectoryControls.defaultValue,
     pluginStateServer: PluginConfig.State.DefaultServer.defaultValue,
     volumeStreamingServer: PluginConfig.VolumeStreaming.DefaultServer.defaultValue,
@@ -118,16 +135,82 @@ const DefaultViewerOptions = {
     emdbProvider: PluginConfig.Download.DefaultEmdbProvider.defaultValue,
     saccharideCompIdMapType: 'default' as SaccharideCompIdMapType,
     volumesAndSegmentationsDefaultServer: VolsegVolumeServerConfig.DefaultServer.defaultValue,
-    rcsbAssemblySymmetryDefaultServerType: RCSBAssemblySymmetryConfig.DefaultServerType.defaultValue,
-    rcsbAssemblySymmetryDefaultServerUrl: RCSBAssemblySymmetryConfig.DefaultServerUrl.defaultValue,
-    rcsbAssemblySymmetryApplyColors: RCSBAssemblySymmetryConfig.ApplyColors.defaultValue,
 };
 type ViewerOptions = typeof DefaultViewerOptions;
 
 export class Viewer {
-    constructor(public plugin: PluginUIContext) {
-    }
+    // make some library components available for debugging
+    Props = Props;
+    StructureElement = StructureElement;
+    StructureProperties = StructureProperties;
+    StructureComponentManager = StructureComponentManager;
+    ParamDefinition = ParamDefinition;
+    VolumeStreaming = VolumeStreaming;
+    CreateVolumeStreamingBehavior = CreateVolumeStreamingBehavior;
+    StateSelection = StateSelection;
+    // Instance variables
+    selectedParams: any;
+    debugQuery = debugQuery;
+    isHighlightColorUpdated: boolean;
+    refMapping = new RefMap();
+    refMapping_data = new RefMap();
+    refMapping_volume: stringDictionary = {};
+    defaultRendererProps: any;
+    initParams = { ...DefaultParams };
+    initStyle = { ... DefaultStyle };
+    volumeServerURL: string;
+    hasSynced = false;
+    hasVolumes = false;
+    isFocused = false;
 
+    constructor(public plugin: PluginUIContext) {
+        // Save renderer defaults
+        this.defaultRendererProps = { ...this.plugin.canvas3d!.props.renderer };
+    }
+    // all extra functions are defined in a second file and bound to keep this file as unchanged as possible.
+    // TODO: Probably better to transition to subclass
+    phenix = {
+        cameraMode: Phenix.cameraMode.bind(this),
+        postInit: Phenix.postInit.bind(this),
+        getLociForParams: Phenix.getLociForParams.bind(this),
+        loadStructureFromPdbString: Phenix.loadStructureFromPdbString.bind(this),
+        pollStructures: Phenix.pollStructures.bind(this),
+        getSyncResult: Phenix.getSyncResult.bind(this),
+        queryFromJSON: Phenix.queryFromJSON.bind(this),
+        getQueryFromLoci: Phenix.getQueryFromLoci.bind(this),
+        getQueryJSONFromLoci: Phenix.getQueryJSONFromLoci.bind(this),
+        getSel: Phenix.getSel.bind(this),
+        pollSelection: Phenix.pollSelection.bind(this),
+        toggleSelectionMode: Phenix.toggleSelectionMode.bind(this),
+        select: Phenix.select.bind(this),
+        setColor: Phenix.setColor.bind(this),
+        deselectAll: Phenix.deselectAll.bind(this),
+        clearSelection: Phenix.clearSelection.bind(this),
+        clearAll: Phenix.clearAll.bind(this),
+        getColorOfSelection: Phenix.getColorOfSelection.bind(this),
+        setQueryColor: Phenix.setQueryColor.bind(this),
+        normalizeColor: Phenix.normalizeColor.bind(this),
+        getQueryAll: Phenix.getQueryAll.bind(this),
+        getQueryDebug: Phenix.getQueryDebug.bind(this),
+        getThemeParams: Phenix.getThemeParams.bind(this),
+        addRepr: Phenix.addRepr.bind(this),
+        removeRepr: Phenix.removeRepr.bind(this),
+        checkSingleEntry: Phenix.checkSingleEntry.bind(this),
+        getStructureForRef: Phenix.getStructureForRef.bind(this),
+        getSelectedLoci: Phenix.getSelectedLoci.bind(this),
+        getSelectedQuery: Phenix.getSelectedQuery.bind(this),
+        getLocations: Phenix.getLocations.bind(this),
+        getLociStats: Phenix.getLociStats.bind(this),
+        getRepresentationNames: Phenix.getRepresentationNames.bind(this),
+        getRepresentation: Phenix.getRepresentation.bind(this),
+        setTransparencyFromQuery: Phenix.setTransparencyFromQuery.bind(this),
+        volumeRefBehavior: Phenix.volumeRefBehavior.bind(this),
+        volumeRefInfo: Phenix.volumeRefInfo.bind(this),
+        getVolumeEntry: Phenix.getVolumeEntry.bind(this),
+        mapParams: Phenix.mapParams.bind(this),
+        loadMap: Phenix.loadMap.bind(this),
+
+    };
     static async create(elementOrId: string | HTMLElement, options: Partial<ViewerOptions> = {}) {
         const definedOptions = {} as any;
         // filter for defined properies only so the default values
@@ -153,7 +236,7 @@ export class Viewer {
             layout: {
                 initial: {
                     isExpanded: o.layoutIsExpanded,
-                    showControls: o.layoutShowControls,
+                    showControls: false, // this is critical for a clean ui
                     controlsDisplay: o.layoutControlsDisplay,
                     regionState: {
                         bottom: 'full',
@@ -173,6 +256,11 @@ export class Viewer {
                 },
                 remoteState: o.layoutShowRemoteState ? 'default' : 'none',
             },
+            canvas3d: {
+                camera: {
+                    helper: { axes: { name: 'off', params: {} } }
+                },
+            },
             config: [
                 [PluginConfig.General.DisableAntialiasing, o.disableAntialiasing],
                 [PluginConfig.General.PixelScale, o.pixelScale],
@@ -183,11 +271,11 @@ export class Viewer {
                 [PluginConfig.General.PreferWebGl1, o.preferWebgl1],
                 [PluginConfig.General.AllowMajorPerformanceCaveat, o.allowMajorPerformanceCaveat],
                 [PluginConfig.General.PowerPreference, o.powerPreference],
-                [PluginConfig.Viewport.ShowExpand, o.viewportShowExpand],
-                [PluginConfig.Viewport.ShowControls, o.viewportShowControls],
                 [PluginConfig.Viewport.ShowSettings, o.viewportShowSettings],
-                [PluginConfig.Viewport.ShowSelectionMode, o.viewportShowSelectionMode],
-                [PluginConfig.Viewport.ShowAnimation, o.viewportShowAnimation],
+                [PluginConfig.Viewport.ShowExpand, false],
+                [PluginConfig.Viewport.ShowControls, false],
+                [PluginConfig.Viewport.ShowSelectionMode, false],
+                [PluginConfig.Viewport.ShowAnimation, false],
                 [PluginConfig.Viewport.ShowTrajectoryControls, o.viewportShowTrajectoryControls],
                 [PluginConfig.State.DefaultServer, o.pluginStateServer],
                 [PluginConfig.State.CurrentServer, o.pluginStateServer],
@@ -198,9 +286,6 @@ export class Viewer {
                 [PluginConfig.Structure.DefaultRepresentationPreset, ViewerAutoPreset.id],
                 [PluginConfig.Structure.SaccharideCompIdMapType, o.saccharideCompIdMapType],
                 [VolsegVolumeServerConfig.DefaultServer, o.volumesAndSegmentationsDefaultServer],
-                [RCSBAssemblySymmetryConfig.DefaultServerType, o.rcsbAssemblySymmetryDefaultServerType],
-                [RCSBAssemblySymmetryConfig.DefaultServerUrl, o.rcsbAssemblySymmetryDefaultServerUrl],
-                [RCSBAssemblySymmetryConfig.ApplyColors, o.rcsbAssemblySymmetryApplyColors],
             ]
         };
 
@@ -217,7 +302,6 @@ export class Viewer {
         });
         return new Viewer(plugin);
     }
-
     setRemoteSnapshot(id: string) {
         const url = `${this.plugin.config.get(PluginConfig.State.CurrentServer)}/get/${id}`;
         return PluginCommands.State.Snapshots.Fetch(this.plugin, { url });
@@ -253,7 +337,7 @@ export class Viewer {
     }
 
     async loadStructureFromData(data: string | number[], format: BuiltInTrajectoryFormat, options?: { dataLabel?: string }) {
-        const _data = await this.plugin.builders.data.rawData({ data, label: options?.dataLabel });
+        const _data = await this.plugin.builders.data.rawData({ data: data, label: options?.dataLabel });
         const trajectory = await this.plugin.builders.structure.parseTrajectory(_data, format);
         await this.plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
     }
@@ -468,37 +552,11 @@ export class Viewer {
         const preset = await plugin.builders.structure.hierarchy.applyPreset(trajectory, params.preset ?? 'default');
 
         return { model, coords, preset };
-    }
-
-    async loadMvsFromUrl(url: string, format: 'mvsj') {
-        if (format === 'mvsj') {
-            const data = await this.plugin.runTask(this.plugin.fetch({ url, type: 'string' }));
-            const mvsData = MVSData.fromMVSJ(data);
-            await loadMVS(this.plugin, mvsData, { sanityChecks: true });
-        } else {
-            throw new Error(`Unknown MolViewSpec format: ${format}`);
-        }
-        // We might add more formats in the future
-    }
-
-    async loadMvsData(data: string, format: 'mvsj') {
-        if (format === 'mvsj') {
-            const mvsData = MVSData.fromMVSJ(data);
-            await loadMVS(this.plugin, mvsData, { sanityChecks: true });
-        } else {
-            throw new Error(`Unknown MolViewSpec format: ${format}`);
-        }
-        // We might add more formats in the future
-    }
+    };
 
     handleResize() {
         this.plugin.layout.events.updated.next(void 0);
     }
-
-    dispose() {
-        this.plugin.dispose();
-    }
-}
 
 export interface LoadStructureOptions {
     representationParams?: StructureRepresentationPresetProvider.CommonParams

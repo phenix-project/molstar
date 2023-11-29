@@ -76,7 +76,7 @@
                 emdbProvider: emdbProvider || 'pdbe',
                 volumeStreamingServer: (mapProvider || 'pdbe') === 'rcsb'
                     ? 'https://maps.rcsb.org'
-                    : 'https://www.ebi.ac.uk/pdbe/densities',
+                    : 'https://www.ebi.ac.uk/pdbe/volume-server',
                 pixelScale: parseFloat(pixelScale) || 1,
                 pickScale: parseFloat(pickScale) || 0.25,
                 pickPadding: isNaN(parseFloat(pickPadding)) ? 1 : parseFloat(pickPadding),
@@ -98,14 +98,6 @@
                 var structureUrlIsBinary = getParam('structure-url-is-binary', '[^&]+').trim() === '1';
                 if (structureUrl) viewer.loadStructureFromUrl(structureUrl, structureUrlFormat, structureUrlIsBinary);
 
-                var mvsUrl = getParam('mvs-url', '[^&]+').trim();
-                var mvsData = getParam('mvs-data', '[^&]+').trim();
-                var mvsFormat = getParam('mvs-format', '[^&]+').trim() || 'mvsj';
-                if (mvsUrl && mvsData) console.error('Cannot specify mvs-url and mvs-data URL parameters at the same time. Ignoring both.');
-                else if (mvsUrl) viewer.loadMvsFromUrl(mvsUrl, mvsFormat);
-                else if (mvsData) viewer.loadMvsData(mvsData, mvsFormat);
-
-
                 var pdb = getParam('pdb', '[^&]+').trim();
                 if (pdb) viewer.loadPdb(pdb);
 
@@ -120,12 +112,8 @@
 
                 var modelArchive = getParam('model-archive', '[^&]+').trim();
                 if (modelArchive) viewer.loadModelArchive(modelArchive);
-
-                window.addEventListener('unload', () => {
-                    // to aid GC
-                    viewer.dispose();
-                });
-            });
+                window.viewer = viewer;
+              });
         </script>
         <!-- __MOLSTAR_ANALYTICS__ -->
     </body>
