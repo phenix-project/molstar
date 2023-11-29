@@ -1,5 +1,5 @@
 ## Phenix Molstar
-Phenix implementation of the [Mol* viewer](https://molstar.org). Minimal changes have been made to the default viewer, but the entire project is forked for simplicity. Full installation instructions are described in the original readme file [README_MOLSTAR.md](README_MOLSTAR.md)
+Phenix implementation of the [Mol* viewer](https://molstar.org). Minimal changes have been made to the default viewer, but the entire project is forked for simplicity. Full installation options for molstar are described in the original readme file [README_MOLSTAR.md](README_MOLSTAR.md)
 
 ## Install
 
