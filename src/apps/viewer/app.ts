@@ -557,7 +557,7 @@ export class Viewer {
     handleResize() {
         this.plugin.layout.events.updated.next(void 0);
     }
-
+  }
 export interface LoadStructureOptions {
     representationParams?: StructureRepresentationPresetProvider.CommonParams
 }
