@@ -5,20 +5,10 @@
  * @author Alexander Rose <alexander.rose@weirdbyte.de>
  */
 
-import { ANVILMembraneOrientation } from '../../extensions/anvil/behavior';
-import { CellPack } from '../../extensions/cellpack';
-import { DnatcoNtCs } from '../../extensions/dnatco';
-import { G3DFormat, G3dProvider } from '../../extensions/g3d/format';
-import { Volseg, VolsegVolumeServerConfig } from '../../extensions/volumes-and-segmentations';
-import { GeometryExport } from '../../extensions/geo-export';
-import { MAQualityAssessment } from '../../extensions/model-archive/quality-assessment/behavior';
+import { G3dProvider } from '../../extensions/g3d/format';
+import { VolsegVolumeServerConfig } from '../../extensions/volumes-and-segmentations';
 import { QualityAssessmentPLDDTPreset, QualityAssessmentQmeanPreset } from '../../extensions/model-archive/quality-assessment/behavior';
 import { QualityAssessment } from '../../extensions/model-archive/quality-assessment/prop';
-import { ModelExport } from '../../extensions/model-export';
-import { Mp4Export } from '../../extensions/mp4-export';
-import { PDBeStructureQualityReport } from '../../extensions/pdbe';
-import { RCSBAssemblySymmetry, RCSBValidationReport } from '../../extensions/rcsb';
-import { ZenodoImport } from '../../extensions/zenodo';
 import { Volume } from '../../mol-model/volume';
 import { DownloadStructure, PdbDownloadProvider } from '../../mol-plugin-state/actions/structure';
 import { DownloadDensity } from '../../mol-plugin-state/actions/volume';
@@ -39,7 +29,6 @@ import { DefaultPluginUISpec, PluginUISpec } from '../../mol-plugin-ui/spec';
 import { PluginCommands } from '../../mol-plugin/commands';
 import { PluginConfig } from '../../mol-plugin/config';
 import { PluginLayoutControlsDisplay } from '../../mol-plugin/layout';
-import { PluginSpec } from '../../mol-plugin/spec';
 import { PluginState } from '../../mol-plugin/state';
 import { StateObjectRef, StateObjectSelector } from '../../mol-state';
 import { Asset } from '../../mol-util/assets';
@@ -47,30 +36,16 @@ import { Color } from '../../mol-util/color';
 import '../../mol-util/polyfill';
 import { ObjectKeys } from '../../mol-util/type-helpers';
 import { SaccharideCompIdMapType } from '../../mol-model/structure/structure/carbohydrates/constants';
-import { Backgrounds } from '../../extensions/backgrounds';
-import { SbNcbrPartialCharges, SbNcbrPartialChargesPreset, SbNcbrPartialChargesPropertyProvider } from '../../extensions/sb-ncbr';
-import { wwPDBStructConnExtensionFunctions } from '../../extensions/wwpdb/struct-conn';
-import { wwPDBChemicalComponentDictionary } from '../../extensions/wwpdb/ccd/behavior';
+import { SbNcbrPartialChargesPreset, SbNcbrPartialChargesPropertyProvider } from '../../extensions/sb-ncbr';
 
 // Start import modifications
-import { Selection, SelectionQuery, debugQuery, QueryHelper, getLocationArray, queryFromLoci, StyleQuery, Ref, RefMap, DefaultParams, DefaultStyle, allSelectionQuery, stringDictionary } from './helpers';
-import { pdb1yjp } from './debug';
-import { Loci } from '../../mol-model/loci';
-import { EmptyLoci } from '../../mol-model/loci';
-import { Unit, StructureElement, StructureProperties as Props, Bond, StructureProperties, Structure } from '../../mol-model/structure';
-import { InitVolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
+import { debugQuery, RefMap, DefaultStyle, stringDictionary } from './helpers';
+import { StructureElement, StructureProperties as Props, StructureProperties } from '../../mol-model/structure';
 import { VolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/behavior';
-import { StateSelection, StateTransform } from '../../mol-state';
-import { CreateVolumeStreamingInfo, CreateVolumeStreamingBehavior } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
-import { clearStructureOverpaint } from '../../mol-plugin-state/helpers/structure-overpaint';
+import { StateSelection } from '../../mol-state';
+import { CreateVolumeStreamingBehavior } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
 import { StructureComponentManager } from '../../mol-plugin-state/manager/structure/component';
 import { ParamDefinition } from '../../mol-util/param-definition';
-import { StructureQueryHelper } from '../../mol-plugin-state/helpers/structure-query';
-import { StructureComponent } from '../../mol-plugin-state/transforms/model';
-import { Representation } from '../../mol-repr/representation';
-import { Query } from '../../extensions/rcsb/graphql/types';
-import { PluginBehaviors } from '../../mol-plugin/behavior';
-import { Binding } from '../../mol-util/binding';
 import { Phenix } from './phenix';
 // End import modifications
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
@@ -156,7 +131,6 @@ export class Viewer {
     refMapping_data = new RefMap();
     refMapping_volume: stringDictionary = {};
     defaultRendererProps: any;
-    initParams = { ...DefaultParams };
     initStyle = { ... DefaultStyle };
     volumeServerURL: string;
     hasSynced = false;
@@ -611,8 +585,3 @@ export const ViewerAutoPreset = StructureRepresentationPresetProvider({
         }
     }
 });
-
-export const PluginExtensions = {
-    wwPDBStructConn: wwPDBStructConnExtensionFunctions,
-    mvs: { MVSData, loadMVS },
-};

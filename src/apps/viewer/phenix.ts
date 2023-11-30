@@ -1,5 +1,5 @@
 import { Loci } from '../../mol-model/loci';
-import { StructureElement, StructureProperties } from '../../mol-model/structure';
+import { StructureElement } from '../../mol-model/structure';
 import { clearStructureOverpaint } from '../../mol-plugin-state/helpers/structure-overpaint';
 import { StructureQueryHelper } from '../../mol-plugin-state/helpers/structure-query';
 import { StructureComponentManager } from '../../mol-plugin-state/manager/structure/component';
@@ -29,7 +29,6 @@ export namespace Phenix {
                 // console.log('hover');
                 const l = StructureElement.Loci.getFirstLocation(ev.current.loci);
                 if (l) {
-                    const seq_id = StructureProperties.residue.label_seq_id(l);
                     // Hover related logic...
                 }
             }
@@ -41,7 +40,6 @@ export namespace Phenix {
                 console.log('click');
                 const l = StructureElement.Loci.getFirstLocation(ev.current.loci);
                 if (l) {
-                    const seq_id = StructureProperties.residue.label_seq_id(l);
                     // Click related logic...
                     this.isFocused = true;
                 }
@@ -49,20 +47,23 @@ export namespace Phenix {
         });
     }
 
-    export function getLociForParams(this: Viewer, query: SelectionQuery): Loci {
+    export function getLociForParams(this: Viewer, query: SelectionQuery): Loci | undefined {
         if (query.params.refId === '') {
             throw new Error('Provide a reference');
         }
         const ref = this.refMapping.retrieveRef(query.params.refId);
-        const refId = ref.molstarRefId;
-        // const assemblyRef = this.plugin.managers.structure.hierarchy.current.structures[0].cell.transform.ref;
-        const data = (this.plugin.state.data.select(refId)[0].obj as PluginStateObject.Molecule.Structure).data;
-        return QueryHelper.getInteractivityLoci(query, data);
+        if (ref) {
+            const refId = ref.molstarRefId;
+            // const assemblyRef = this.plugin.managers.structure.hierarchy.current.structures[0].cell.transform.ref;
+            const data = (this.plugin.state.data.select(refId)[0].obj as PluginStateObject.Molecule.Structure).data;
+            return QueryHelper.getInteractivityLoci(query, data);
+        }
     }
 
     export async function loadStructureFromPdbString(this: Viewer, data: string, format: string, label: string, external_ref_id: string, style: StyleQuery = { ... DefaultStyle }) {
         this.hasSynced = false;
         const _data = await this.plugin.builders.data.rawData({ data: data, label: label });
+        // @ts-ignore
         const trajectory = await this.plugin.builders.structure.parseTrajectory(_data, format);
         await this.plugin.builders.structure.hierarchy.applyPreset(trajectory, 'default');
 
@@ -86,10 +87,7 @@ export namespace Phenix {
             molstarRefId: newRefIds[0],
             externalRefId: external_ref_id,
             // structure: newStructures[0], // or any other value
-            style: style,
         };
-        newRef.style.refId = newRef.molstarRefId;
-        newRef.style.query.params.refId = newRef.molstarRefId;
         this.refMapping.addRef(newRef);
 
 
@@ -98,6 +96,7 @@ export namespace Phenix {
 
         const newRefData: Ref = {
             molstarRefId: newRefIds[0],
+            // @ts-ignore
             externalRefId: structures[0].model.cell.obj.data.id,
         };
         this.refMapping_data.addRef(newRefData);
@@ -107,22 +106,24 @@ export namespace Phenix {
 
 
     export function pollStructures(this: Viewer) {
-        const refs = [];
+
+        const refs: string[] = [];
         const structures = this.plugin.managers.structure.hierarchy.current.structures;
         structures.forEach((structure) => {
             const ref = structure.cell.transform.ref;
-            // console.log('ref: ', ref);
-            refs.push(ref);
+            if (ref) {
+                refs.push(ref);
+            }
         });
         return JSON.stringify(refs);
     }
     export function getSyncResult(this: Viewer) {
-        if (this.hasVolumes && !this.phenix.volumeRefInfo().params.values.entries) { this.hasSynced = false }
+        if (this.hasVolumes && !this.phenix.volumeRefInfo().params.values.entries) { this.hasSynced = false; }
         let volumeData = {};
         if (this.hasVolumes) {
             const volumeEntries = JSON.stringify(this.phenix.volumeRefInfo().params.values.entries);
-            if (volumeEntries) { volumeData = volumeEntries };
-            console.log("volumeData: ",volumeData)
+            if (volumeEntries) { volumeData = volumeEntries; };
+            console.log('volumeData: ', volumeData);
         }
         const result = { hasSynced: this.hasSynced, refMapping: JSON.stringify(this.refMapping.molstarToExternal), volumeEntries: JSON.stringify(volumeData) };
         // if (this.hasSynced) { this.hasSynced = false; } // flip the sync toggle
@@ -136,15 +137,19 @@ export namespace Phenix {
 
     export function getQueryFromLoci(this: Viewer, loci: Loci) {
         // console.log("get query from loci")
+        // @ts-ignore
         const data_id = loci.structure.state.model.id;
         // console.log(data_id)
         const ref_id_molstar = this.refMapping_data.retrieveRefId(data_id); // returns the 'other'
         // console.log(ref_id_molstar)
-        const ref = this.refMapping.retrieveRef(ref_id_molstar);
-        // console.log(ref.externalRefId)
-        const query = queryFromLoci(loci);
-        query.params.refId = ref.externalRefId;
-        return query;
+        if (ref_id_molstar) {
+            const ref = this.refMapping.retrieveRef(ref_id_molstar);
+            // console.log(ref.externalRefId)
+            const query = queryFromLoci(loci);
+            // @ts-ignore
+            query.params.refId = ref.externalRefId;
+            return query;
+        }
     }
     export function getQueryJSONFromLoci(this: Viewer, loci: Loci) {
         const query = this.phenix.getQueryFromLoci(loci);
@@ -175,7 +180,7 @@ export namespace Phenix {
         // }
 
         // set default selection color (can remove?)
-        this.setColor({ select: { r: 255, g: 112, b: 3 }, highlight: { r: 255, g: 112, b: 3 } });
+        this.phenix.setColor({ select: { r: 255, g: 112, b: 3 }, highlight: { r: 255, g: 112, b: 3 } });
 
         // apply selection
         this.plugin.managers.interactivity.lociSelects.selectOnly({ loci });
@@ -190,11 +195,11 @@ export namespace Phenix {
         const rParam: any = {};
 
         if (param.highlight) {
-            rParam['highlightColor'] = this.normalizeColor(param.highlight);
+            rParam['highlightColor'] = this.phenix.normalizeColor(param.highlight);
         }
 
         if (param.select) {
-            rParam['selectColor'] = this.normalizeColor(param.select);
+            rParam['selectColor'] = this.phenix.normalizeColor(param.select);
         }
 
         PluginCommands.Canvas3D.SetSettings(this.plugin, {
@@ -233,7 +238,7 @@ export namespace Phenix {
         //   this.visual.reset({ theme: true });
         // }
         // remove overpaints
-        await clearStructureOverpaint(this.plugin, this.plugin.managers.structure.hierarchy.current.structures[structIndex].components);
+        await clearStructureOverpaint(this.plugin, this.plugin.managers.structure.hierarchy.current.structures[0].components);
 
         // remove selection representations
         if (this.selectedParams && this.selectedParams.addedRepr) {
@@ -270,12 +275,14 @@ export namespace Phenix {
     export function getQueryAll(this: Viewer, refId: string) {
         const ref = this.refMapping.retrieveRef(refId);
         const query = { ...allSelectionQuery };
+        // @ts-ignore
         query.params.refId = ref.molstarRefId;
         return query;
     }
     export function getQueryDebug(this: Viewer, refId: string) {
         const ref = this.refMapping.retrieveRef(refId);
         const query = { ...debugQuery };
+        // @ts-ignore
         query.params.refId = ref.molstarRefId;
         return query;
     }
@@ -295,7 +302,7 @@ export namespace Phenix {
     export async function addRepr(this: Viewer, query: SelectionQuery, reprName: string) {
 
         // // Structure list to apply selection
-        const ref = this.refMapping.retrieveRef(query.params.refId);
+        // const ref = this.refMapping.retrieveRef(query.params.refId);
         // const oldStyle = ref.style;
 
         const loci = this.phenix.getLociForParams(query);
@@ -315,7 +322,7 @@ export namespace Phenix {
 
     export async function removeRepr(this: Viewer, query: SelectionQuery, reprName: string) {
         // Structure list to apply selection
-        const ref = this.refMapping.retrieveRef(query.params.refId);
+        // const ref = this.refMapping.retrieveRef(query.params.refId);
 
         const loci = this.phenix.getLociForParams(query);
         // console.log('loci: ', loci);
@@ -340,6 +347,7 @@ export namespace Phenix {
         }
     }
     export function getSel(this: Viewer) {
+        // @ts-ignore
         return this.plugin.managers.interactivity.lociSelects.sel;
     }
     export function getStructureForRef(this: Viewer, ref: Ref) {
@@ -369,10 +377,12 @@ export namespace Phenix {
     }
 
     export function getLociStats(this: Viewer, loci: Loci) {
+        // @ts-ignore
         return StructureElement.Stats.ofLoci(loci);
     }
     export function getColorOfSelection(this: Viewer, query: SelectionQuery) {
         const ref = this.refMapping.retrieveRef(query.params.refId);
+        // @ts-ignore
         const themeParams = StructureComponentManager.getThemeParams(this.plugin, ref.structure);
         const colorValue = ParamDefinition.getDefaultValues(themeParams);
         return colorValue;
@@ -397,7 +407,7 @@ export namespace Phenix {
     export function getRepresentationNames(this: Viewer, query: SelectionQuery) {
         const ref = this.refMapping.retrieveRef(query.params.refId);
         const structure = this.phenix.getStructureForRef(ref);
-        const names = structure.components[0].representations.map(rep => rep.cell.params.values.type.name);
+        const names = structure.components[0].representations.map((rep: any) => rep.cell.params.values.type.name);
         return names;
     }
 
@@ -406,7 +416,7 @@ export namespace Phenix {
         const ref = this.refMapping.retrieveRef(query.params.refId);
         const structure = this.phenix.getStructureForRef(ref);
         const names = this.phenix.getRepresentationNames(query);
-        const reprs = structure.components[0].representations.filter(rep =>rep.cell.params.values.type.name === representation_name);
+        const reprs = structure.components[0].representations.filter((rep: any) =>rep.cell.params.values.type.name === representation_name);
         if (reprs.length !== 1 && !strict) {
             await this.phenix.addRepr(query, representation_name);
             return this.phenix.getRepresentation(query, representation_name, true);
@@ -424,20 +434,23 @@ export namespace Phenix {
         const structure = this.phenix.getStructureForRef(ref);
         const representation = await this.phenix.getRepresentation(query, representation_name);
         const repr = representation.cell;
-        const data = (this.plugin.state.data.select(ref.molstarRefId)[0].obj as PluginStateObject.Molecule.Structure).data;
-        const sel = QueryHelper.getSelFromQuery(query, data);
+        if (ref) {
+            const data = (this.plugin.state.data.select(ref.molstarRefId)[0].obj as PluginStateObject.Molecule.Structure).data;
+            const sel = QueryHelper.getSelFromQuery(query, data);
+            // @ts-ignore
 
-        const { selection } = StructureQueryHelper.createAndRun(structure.cell.obj!.data.root, sel);
-        const bundle = StructureElement.Bundle.fromSelection(selection);
+            const { selection } = StructureQueryHelper.createAndRun(structure.cell.obj!.data.root, sel);
+            const bundle = StructureElement.Bundle.fromSelection(selection);
 
-        const update = this.plugin.build();
+            const update = this.plugin.build();
 
-        // if you have more than one repr to apply this to, do this for each of them
-        update.to(repr).apply(StateTransforms.Representation.TransparencyStructureRepresentation3DFromBundle, {
-            layers: [{ bundle, value: value }]
-        });
+            // if you have more than one repr to apply this to, do this for each of them
+            update.to(repr).apply(StateTransforms.Representation.TransparencyStructureRepresentation3DFromBundle, {
+                layers: [{ bundle, value: value }]
+            });
 
-        return update.commit();
+            return update.commit();
+        }
     }
     export function toggleSelectionMode(this: Viewer, isVisible: boolean) {
         if (!isVisible) {
@@ -452,6 +465,8 @@ export namespace Phenix {
         this.hasSynced = false;
         const refIdMolstar = this.refMapping.retrieveRefId(refIdModel);
         const params = this.phenix.mapParams(refIdMolstar, refIdMap);
+        // @ts-ignore
+
         await this.plugin.runTask(this.plugin.state.data.applyAction(InitVolumeStreaming, params, refIdMolstar));
         this.hasVolumes = true;
         this.hasSynced = true;
@@ -478,7 +493,7 @@ export namespace Phenix {
     }
 
     export function getVolumeEntry(this: Viewer, volumeId: string) {
-        const entry = this.phenix.volumeRefInfo().params.values.entries.filter(entry => entry.dataId === volumeId)[0];
+        const entry = this.phenix.volumeRefInfo().params.values.entries.filter((entry: any) => entry.dataId === volumeId)[0];
         return entry;
     }
     export function volumeRefInfo(this: Viewer) {

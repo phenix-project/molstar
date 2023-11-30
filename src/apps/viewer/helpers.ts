@@ -1,7 +1,6 @@
 
 import * as Expression from '../../mol-script/language/expression';
-import { StructureSelection, QueryContext, StructureProperties } from '../../mol-model/structure';
-import { compile } from '../../mol-script/runtime/query/compiler';
+import { StructureSelection, StructureProperties } from '../../mol-model/structure';
 import { Queries } from '../../mol-model/structure';
 import { Location } from '../../mol-model/structure/structure/element/location';
 import { Loci } from '../../mol-model/loci';
@@ -11,7 +10,7 @@ import { StructureQuery } from '../../mol-model/structure/query/query';
 // Assuming Location and Loci are defined elsewhere
 // and StructureProperties are functions that take a Location and return a value
 
-export function getLocationArray(loci: Loci): Location[] {
+export function getLocationArray(loci: any): Location[] {
     if (Loci.isEmpty(loci)) return [];
 
     const locationArray: Location[] = [];
@@ -93,9 +92,9 @@ export class RefMap {
             throw new Error('refID not present in mapping');
         }
     }
-    retrieveRef(refIdAny: string): Ref { // returns the molstar ref id for either input
+    retrieveRef(refIdAny: string): Ref | undefined { // returns the molstar ref id for either input
         const refMolstar = this.retrieveRefId(refIdAny);
-        return this.refObjectStorage[refMolstar];
+        if (refMolstar) { return this.refObjectStorage[refMolstar]; }
     }
     summarize() {
         return JSON.stringify(this.molstarToExternal);
@@ -105,9 +104,6 @@ export class RefMap {
 export type Ref = {
     molstarRefId: string,
     externalRefId: string,
-    // structure: any;
-    style: StyleQuery;
-    // styleHistory: StyleQuery[];
 };
 
 export interface stringDictionary {
@@ -195,41 +191,42 @@ export const DefaultStyle: StyleQuery = {
 export namespace QueryHelper {
 
     // Mapping function to get the correct function from StructureProperties
+    type KeywordMapping = {
+        [key: string]: string;
+    };
+
+    // Adjust the function with proper typings
     function getStructurePropertyFunction(keyword: string, authLabelPref: string): any {
-        const mapping: any = {
-            // 'entity_id': authLabelPref === 'auth' ? 'entity.id' : 'entity.id',
+        // Define the mapping with the KeywordMapping type
+        const mapping: KeywordMapping = {
             'asym_id': authLabelPref === 'auth' ? 'chain.auth_asym_id' : 'chain.label_asym_id',
             'seq_id': authLabelPref === 'auth' ? 'residue.auth_seq_id' : 'residue.label_seq_id',
             'comp_id': authLabelPref === 'auth' ? 'residue.auth_comp_id' : 'residue.label_comp_id',
             'atom_id': authLabelPref === 'auth' ? 'atom.auth_atom_id' : 'atom.label_atom_id',
-            // 'id': authLabelPref === 'auth' ? 'atom.id' : 'atom.id',
-            // add more here maybe...
+            // ...other mappings...
         };
-        // Check if the keyword exists in mapping
+
+        // Ensure the keyword exists in the mapping
         if (!mapping[keyword]) {
             console.error(`Keyword '${keyword}' not in mapping`);
             return null;
         }
-        const mapped = mapping[keyword].split('.');
+        // Splitting the string into an array of strings
+        const mapped: string[] = mapping[keyword].split('.');
 
-        // Check if StructureProperties exists
-        if (!StructureProperties) {
-            console.error('StructureProperties is undefined');
-            return null;
-        }
-
-        // Check if the first part of the path exists
-        if (!StructureProperties[mapped[0]]) {
+        // Check if StructureProperties exists and has the specified property
+        if (!StructureProperties || !(mapped[0] in StructureProperties)) {
             console.error(`StructureProperties[${mapped[0]}] is undefined`);
             return null;
         }
 
         // Check if the function exists
+        // @ts-ignore
         if (typeof StructureProperties[mapped[0]][mapped[1]] !== 'function') {
             console.error(`StructureProperties[${mapped[0]}][${mapped[1]}] is not a function`);
             return null;
         }
-
+        // @ts-ignore
         return StructureProperties[mapped[0]][mapped[1]];
     }
     function mapKeywordToTestName(keyword: string): string {
@@ -270,22 +267,25 @@ export namespace QueryHelper {
                         }
                         // console.log(keyword);
                         // console.log(query.params.auth_label_pref);
-                        const structureFunction = getStructurePropertyFunction(keyword, query.params.auth_label_pref);
-                        // console.log(structureFunction);
-                        const elementValue = structureFunction(l.element);
-                        // console.log('Function:', structureFunction);
-                        // console.log('Operator:', operator);
-                        // console.log('Value:', value);
-                        // console.log('elementValue:', elementValue);
-                        switch (operator) {
-                            case '==':
-                                return elementValue === value;
-                            case '>=':
-                                return elementValue >= value;
-                            case '<=':
-                                return elementValue <= value;
-                            default:
-                                return false;
+                        if (query.params.auth_label_pref) {
+                            const structureFunction = getStructurePropertyFunction(keyword, query.params.auth_label_pref);
+
+                            // console.log(structureFunction);
+                            const elementValue = structureFunction(l.element);
+                            // console.log('Function:', structureFunction);
+                            // console.log('Operator:', operator);
+                            // console.log('Value:', value);
+                            // console.log('elementValue:', elementValue);
+                            switch (operator) {
+                                case '==':
+                                    return elementValue === value;
+                                case '>=':
+                                    return elementValue >= value;
+                                case '<=':
+                                    return elementValue <= value;
+                                default:
+                                    return false;
+                            }
                         }
                     });
                 };
