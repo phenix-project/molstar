@@ -47,6 +47,8 @@ import { CreateVolumeStreamingBehavior } from '../../mol-plugin/behavior/dynamic
 import { StructureComponentManager } from '../../mol-plugin-state/manager/structure/component';
 import { ParamDefinition } from '../../mol-util/param-definition';
 import { Phenix } from './phenix';
+import { any } from 'io-ts';
+import { CreateVolumeStreamingBehavior, CreateVolumeStreamingInfo, InitVolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
 // End import modifications
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
 export { setDebugMode, setProductionMode, setTimingMode, consoleStats } from '../../mol-util/debug';
@@ -123,6 +125,7 @@ export class Viewer {
     VolumeStreaming = VolumeStreaming;
     CreateVolumeStreamingBehavior = CreateVolumeStreamingBehavior;
     StateSelection = StateSelection;
+    InitVolumeStreaming = InitVolumeStreaming;
     // Instance variables
     selectedParams: any;
     debugQuery = debugQuery;
@@ -136,6 +139,7 @@ export class Viewer {
     hasSynced = false;
     hasVolumes = false;
     isFocused = false;
+    phenixState = any;
 
     constructor(public plugin: PluginUIContext) {
         // Save renderer defaults

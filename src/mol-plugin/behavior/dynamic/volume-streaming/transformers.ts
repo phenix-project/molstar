@@ -64,32 +64,33 @@ export const InitVolumeStreaming = StateAction.build({
         const dataId = params.entries[i].id.toLowerCase();
         let emDefaultContourLevel: number | undefined;
 
-        if (params.method === 'em') {
-            // if pdb ids are given for method 'em', get corresponding emd ids
-            // and continue the loop
-            if (!dataId.toUpperCase().startsWith('EMD')) {
-                await taskCtx.update('Getting EMDB info...');
-                const emdbIds = await getEmdbIds(plugin, taskCtx, dataId);
-                for (let j = 0, jl = emdbIds.length; j < jl; ++j) {
-                    const emdbId = emdbIds[j];
-                    let contourLevel: number | undefined;
-                    try {
-                        contourLevel = await getContourLevel(params.options.emContourProvider, plugin, taskCtx, emdbId);
-                    } catch (e) {
-                        console.info(`Could not get map info for ${emdbId}: ${e}`);
-                        continue;
-                    }
-                    addEntry(entries, params.method, emdbId, contourLevel || 0);
-                }
-                continue;
-            }
-            try {
-                emDefaultContourLevel = await getContourLevel(params.options.emContourProvider, plugin, taskCtx, dataId);
-            } catch (e) {
-                console.info(`Could not get map info for ${dataId}: ${e}`);
-                continue;
-            }
-        }
+        // Don't try automated ways to look for contour
+        // if (params.method === 'em') {
+        //     // if pdb ids are given for method 'em', get corresponding emd ids
+        //     // and continue the loop
+        //     if (!dataId.toUpperCase().startsWith('EMD')) {
+        //         await taskCtx.update('Getting EMDB info...');
+        //         const emdbIds = await getEmdbIds(plugin, taskCtx, dataId);
+        //         for (let j = 0, jl = emdbIds.length; j < jl; ++j) {
+        //             const emdbId = emdbIds[j];
+        //             let contourLevel: number | undefined;
+        //             try {
+        //                 contourLevel = await getContourLevel(params.options.emContourProvider, plugin, taskCtx, emdbId);
+        //             } catch (e) {
+        //                 console.info(`Could not get map info for ${emdbId}: ${e}`);
+        //                 continue;
+        //             }
+        //             addEntry(entries, params.method, emdbId, contourLevel || 0);
+        //         }
+        //         continue;
+        //     }
+        //     try {
+        //         emDefaultContourLevel = await getContourLevel(params.options.emContourProvider, plugin, taskCtx, dataId);
+        //     } catch (e) {
+        //         console.info(`Could not get map info for ${dataId}: ${e}`);
+        //         continue;
+        //     }
+        // }
 
         addEntry(entries, params.method, dataId, emDefaultContourLevel || 0);
     }

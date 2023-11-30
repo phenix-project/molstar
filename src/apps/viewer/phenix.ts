@@ -117,7 +117,8 @@ export namespace Phenix {
         });
         return JSON.stringify(refs);
     }
-    export function getSyncResult(this: Viewer) {
+    export function getSyncResult(this: Viewer, stated_json: string) {
+        this.phenixState = JSON.parse(stated_json)
         if (this.hasVolumes && !this.phenix.volumeRefInfo().params.values.entries) { this.hasSynced = false; }
         let volumeData = {};
         if (this.hasVolumes) {
@@ -466,9 +467,10 @@ export namespace Phenix {
         const refIdMolstar = this.refMapping.retrieveRefId(refIdModel);
         const params = this.phenix.mapParams(refIdMolstar, refIdMap);
         // @ts-ignore
-
         await this.plugin.runTask(this.plugin.state.data.applyAction(InitVolumeStreaming, params, refIdMolstar));
         this.hasVolumes = true;
+        console.log("###############################################################################")
+        console.log("finish loadMap, setting hasSynced=true")
         this.hasSynced = true;
     }
 
@@ -480,15 +482,19 @@ export namespace Phenix {
         const mapParams = InitVolumeStreaming.createDefaultParams(asm, this.plugin);
         const id = volumeId;
         mapParams.entries = [{ id: id }];
-        // mapParams.method = source;
+        mapParams.method = 'em';
         mapParams.options.serverUrl = this.volumeServerURL;
         // if (!this.volumeStreamingRef) {
         const volumeStreamingRef = 'volume-streaming' + '' + Math.floor(Math.random() * Math.floor(100));
         mapParams.options.behaviorRef = volumeStreamingRef;
         this.refMapping_volume[volumeId] = volumeStreamingRef;
-        // mapParams.defaultView = 'camera-target';
+        mapParams.defaultView = 'auto';
         // this.volumeStreamingRef = volumeStreamingRef;
         // }
+        console.log("")
+        console.log("mapParams")
+        console.log("")
+        console.log(JSON.stringify(mapParams))
         return mapParams;
     }
 
