@@ -153,7 +153,8 @@ export class Viewer {
         getLociForParams: Phenix.getLociForParams.bind(this),
         loadStructureFromPdbString: Phenix.loadStructureFromPdbString.bind(this),
         pollStructures: Phenix.pollStructures.bind(this),
-        getSyncResult: Phenix.getSyncResult.bind(this),
+        getState: Phenix.getState.bind(this),
+        setState: Phenix.setState.bind(this),
         queryFromJSON: Phenix.queryFromJSON.bind(this),
         getQueryFromLoci: Phenix.getQueryFromLoci.bind(this),
         getQueryJSONFromLoci: Phenix.getQueryJSONFromLoci.bind(this),
@@ -185,7 +186,6 @@ export class Viewer {
         volumeRefBehavior: Phenix.volumeRefBehavior.bind(this),
         volumeRefInfo: Phenix.volumeRefInfo.bind(this),
         getVolumeEntry: Phenix.getVolumeEntry.bind(this),
-        mapParams: Phenix.mapParams.bind(this),
         loadMap: Phenix.loadMap.bind(this),
 
     };
