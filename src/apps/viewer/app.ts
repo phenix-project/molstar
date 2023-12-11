@@ -43,12 +43,11 @@ import { debugQuery, RefMap, DefaultStyle, stringDictionary } from './helpers';
 import { StructureElement, StructureProperties as Props, StructureProperties } from '../../mol-model/structure';
 import { VolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/behavior';
 import { StateSelection } from '../../mol-state';
-import { CreateVolumeStreamingBehavior } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
 import { StructureComponentManager } from '../../mol-plugin-state/manager/structure/component';
 import { ParamDefinition } from '../../mol-util/param-definition';
 import { Phenix } from './phenix';
 import { any } from 'io-ts';
-import { CreateVolumeStreamingBehavior, CreateVolumeStreamingInfo, InitVolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
+import { CreateVolumeStreamingBehavior, InitVolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
 // End import modifications
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
 export { setDebugMode, setProductionMode, setTimingMode, consoleStats } from '../../mol-util/debug';

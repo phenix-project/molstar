@@ -14,7 +14,7 @@ import { PluginContext } from '../../../../mol-plugin/context';
 import { urlCombine } from '../../../../mol-util/url';
 import { Volume } from '../../../../mol-model/volume';
 import { StateAction, StateObject, StateTransformer } from '../../../../mol-state';
-import { getStreamingMethod, getIds, getContourLevel, getEmdbIds } from './util';
+import { getStreamingMethod, getIds } from './util';
 import { VolumeStreaming } from './behavior';
 import { VolumeRepresentation3DHelpers } from '../../../../mol-plugin-state/transforms/representation';
 import { VolumeRepresentationRegistry } from '../../../../mol-repr/volume/registry';

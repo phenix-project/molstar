@@ -13,6 +13,7 @@ import { Viewer } from './app';
 import { allSelectionQuery, debugQuery, DefaultStyle, getLocationArray, queryFromLoci, QueryHelper, Ref, RefMap, SelectionQuery, StyleQuery } from './helpers';
 import { StateSelection } from '../../mol-state';
 
+// @ts-ignore
 export namespace Phenix {
     export function cameraMode(this: Viewer) {
         if (this.isFocused) {
@@ -143,6 +144,7 @@ export namespace Phenix {
         // result.hasSynced = this.hasSynced
 
         const result = { ...this.phenixState };
+        // @ts-ignore
         result.hasSynced = this.hasSynced;
         // if (this.hasSynced) { this.hasSynced = false; } // flip the sync toggle
         return JSON.stringify(result);
@@ -498,7 +500,7 @@ export namespace Phenix {
         await this.plugin.runTask(this.plugin.state.data.applyAction(InitVolumeStreaming, mapParams, refIdMolstar));
 
         // update state
-        const volumeEntries = this.phenix.volumeRefInfo().params.values.entries;
+        // const volumeEntries = this.phenix.volumeRefInfo().params.values.entries;
         // @ts-ignore
         this.phenixState.references[volumeId].external_ids.molstar = volumeStreamingRef;
         this.hasVolumes = true;
