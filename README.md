@@ -3,9 +3,8 @@ Phenix implementation of the [Mol* viewer](https://molstar.org). Minimal changes
 
 ## Install
 
-### Clone into existing qttbx directory
+### Clone into existing qttbx directory (under your Phenix installation location)
 ```bash
-# Change directory to wherever you have installed Phenix
 cd ~/phenix/modules/cctbx_project/qttbx/
 git clone https://github.com/phenix-project/phenix-molstar/
 cd phenix-molstar
