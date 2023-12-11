@@ -7,7 +7,7 @@ Phenix implementation of the [Mol* viewer](https://molstar.org). Minimal changes
 ```bash
 cd $LIBTBX_BUILD/../modules/cctbx_project/qttbx/
 git clone https://github.com/phenix-project/phenix-molstar/
-cd phenix-project
+cd phenix-molstar
 ```
 
 ### Install Molstar
