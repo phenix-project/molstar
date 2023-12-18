@@ -13,14 +13,15 @@ cd phenix-molstar
 
 ## Install node.js
 1. First verify you don't have node.js. If ```node -v``` and ```npm -v``` print a version you already have it. For best results use the latest version. If the version is too low (<14), this application will definitely not work. 
-####MacOS
+#### MacOS
 2. Go to [https://nodejs.org/](https://nodejs.org/) and download the .pkg file. Install it
 
 #### Linux
-2. Consider [nodesource]([https://nodejs.org/](https://github.com/nodesource/)). 
+Consider [nodesource](https://nodejs.org/](https://github.com/nodesource/)). 
 
-3. Verify installation with ```node -v```. This should also install npm, the node package manager. Verify with ```npm -v```
-4. Install the http server with ```npm install http-server``` 
+## After installation
+1. Verify installation with ```node -v```. This should also install npm, the node package manager. Verify with ```npm -v```
+2. Install the http server with ```npm install http-server``` 
 
 ### Build the Molstar app
 ```JS
