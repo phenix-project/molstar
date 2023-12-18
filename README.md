@@ -12,9 +12,9 @@ cd phenix-molstar
 ```
 
 ## Install node.js
-1. First verify you don't have node.js. If ```node -v``` and ```npm -v``` print a version you already have it. For best results use the latest version. If the version is too low (<14), this application will definitely not work. 
+First verify you don't have node.js. If ```node -v``` and ```npm -v``` print a version you already have it. For best results use the latest version. If the version is too low (<14), this application will definitely not work. 
 #### MacOS
-2. Go to [https://nodejs.org/](https://nodejs.org/) and download the .pkg file. Install it
+Go to [https://nodejs.org/](https://nodejs.org/) and download the .pkg file. Install it
 
 #### Linux
 Consider [nodesource](https://nodejs.org/](https://github.com/nodesource/)). 
