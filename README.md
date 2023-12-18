@@ -16,8 +16,8 @@ cd phenix-molstar
 ####MacOS
 2. Go to [https://nodejs.org/](https://nodejs.org/) and download the .pkg file. Install it
 
-####Ubuntu
-2. Consider [nodesource]([https://nodejs.org/](https://github.com/nodesource/distributions#debian-and-ubuntu-based-distributions)). 
+####Linux
+2. Consider [nodesource]([https://nodejs.org/](https://github.com/nodesource/)). 
 
 3. Verify installation with ```node -v```. This should also install npm, the node package manager. Verify with ```npm -v```
 4. Install the http server with ```npm install http-server``` 
