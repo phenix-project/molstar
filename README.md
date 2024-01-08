@@ -21,7 +21,7 @@ Consider [nodesource](https://nodejs.org/](https://github.com/nodesource/)).
 
 ## After installation
 1. Verify installation with ```node -v```. This should also install npm, the node package manager. Verify with ```npm -v```
-2. Install the http server with ```npm install http-server``` 
+2. Install the http server with ```sudo npm install -g http-server``` 
 
 ### Build the Molstar app
 ```JS
