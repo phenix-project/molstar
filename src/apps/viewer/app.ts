@@ -39,14 +39,13 @@ import { SaccharideCompIdMapType } from '../../mol-model/structure/structure/car
 import { SbNcbrPartialChargesPreset, SbNcbrPartialChargesPropertyProvider } from '../../extensions/sb-ncbr';
 
 // Start import modifications
-import { debugQuery, RefMap, DefaultStyle, stringDictionary } from './helpers';
+import { debugQuery, RefMap, stringDictionary, PhenixStateClass } from './helpers';
 import { StructureElement, StructureProperties as Props, StructureProperties } from '../../mol-model/structure';
 import { VolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/behavior';
 import { StateSelection } from '../../mol-state';
 import { StructureComponentManager } from '../../mol-plugin-state/manager/structure/component';
 import { ParamDefinition } from '../../mol-util/param-definition';
 import { Phenix } from './phenix';
-import { any } from 'io-ts';
 import { CreateVolumeStreamingBehavior, InitVolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
 // End import modifications
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
@@ -133,12 +132,11 @@ export class Viewer {
     refMapping_data = new RefMap();
     refMapping_volume: stringDictionary = {};
     defaultRendererProps: any;
-    initStyle = { ... DefaultStyle };
     volumeServerURL: string;
     hasSynced = false;
     hasVolumes = false;
     isFocused = false;
-    phenixState = any;
+    phenixState = new PhenixStateClass();
 
     constructor(public plugin: PluginUIContext) {
         // Save renderer defaults
@@ -179,13 +177,18 @@ export class Viewer {
         getSelectedQuery: Phenix.getSelectedQuery.bind(this),
         getLocations: Phenix.getLocations.bind(this),
         getLociStats: Phenix.getLociStats.bind(this),
-        getRepresentationNames: Phenix.getRepresentationNames.bind(this),
+        //getAllRepresentations: Phenix.getAllRepresentations.bind(this),
+        //getRepresentationNames: Phenix.getRepresentationNames.bind(this),
         getRepresentation: Phenix.getRepresentation.bind(this),
         setTransparencyFromQuery: Phenix.setTransparencyFromQuery.bind(this),
         volumeRefBehavior: Phenix.volumeRefBehavior.bind(this),
         volumeRefInfo: Phenix.volumeRefInfo.bind(this),
         getVolumeEntry: Phenix.getVolumeEntry.bind(this),
         loadMap: Phenix.loadMap.bind(this),
+        //
+        syncAll: Phenix.syncAll.bind(this),
+        syncReferences: Phenix.syncReferences.bind(this),
+        //syncStyle: Phenix.syncStyle.bind(this),
 
     };
     static async create(elementOrId: string | HTMLElement, options: Partial<ViewerOptions> = {}) {

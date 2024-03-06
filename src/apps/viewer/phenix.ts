@@ -10,7 +10,9 @@ import { Color } from '../../mol-util/color';
 import { ParamDefinition } from '../../mol-util/param-definition';
 import { CreateVolumeStreamingBehavior, CreateVolumeStreamingInfo, InitVolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
 import { Viewer } from './app';
-import { allSelectionQuery, debugQuery, DefaultStyle, getLocationArray, queryFromLoci, QueryHelper, Ref, RefMap, SelectionQuery, StyleQuery } from './helpers';
+import { allSelectionQuery, debugQuery, getLocationArray, queryFromLoci, QueryHelper, Ref, RefMap, SelectionQuery} from './helpers';
+import {  PhenixReferenceClass, PhenixStructureClass, PhenixComponentClass} from './helpers';
+
 import { StateSelection } from '../../mol-state';
 
 // @ts-ignore
@@ -61,7 +63,7 @@ export namespace Phenix {
         }
     }
 
-    export async function loadStructureFromPdbString(this: Viewer, data: string, format: string, label: string, external_ref_id: string, style: StyleQuery = { ... DefaultStyle }) {
+    export async function loadStructureFromPdbString(this: Viewer, data: string, format: string, label: string, external_ref_id: string) {
         this.hasSynced = false;
         const _data = await this.plugin.builders.data.rawData({ data: data, label: label });
         // @ts-ignore
@@ -93,6 +95,33 @@ export namespace Phenix {
 
         this.refMapping.addRef(newRef);
 
+        // new 'Dataclasses'
+
+        // Add refs/structures/components to state
+        structures.forEach((structure) => {
+          const refId = structure.cell.transform.ref;
+          const newStructure = new PhenixStructureClass();
+
+          structure.components.forEach((component) => {
+            const newComponent = new PhenixComponentClass();
+            newComponent.key = component.key ?? "";
+            const names = component.representations.map((rep: any) => rep.cell.params.values.type.name);
+            newComponent.representations = names
+            newStructure.components.push(newComponent);
+          });
+
+          // Check if refId is not in phenixState.references
+          if (!(refId in this.phenixState.references)) {
+            const newReference = new PhenixReferenceClass();
+            newReference.id_molstar = newRefIds[0];
+            newReference.id_viewer = external_ref_id;
+            this.phenixState.references[refId] = newReference;
+            newReference.structures.push(newStructure);
+          } else {
+            this.phenixState.references[refId].structures.push(newStructure);
+          }
+        });
+
 
         // do another ref map to map the refId to the data id (Still unclear the difference)
         // need to isolate a single structure
@@ -103,15 +132,18 @@ export namespace Phenix {
             externalRefId: structures[0].model.cell.obj.data.id,
         };
         this.refMapping_data.addRef(newRefData);
-        // console.log(this.refMapping.summarize()); // DEBUG
-
-
 
         // update state
         // @ts-ignore
-        this.phenixState.references[external_ref_id].external_ids.molstar = newRefIds[0];
-        this.hasSynced = true;
-
+        // console.log(this.phenixState)
+        // this.phenixState.references[external_ref_id].external_ids.molstar = newRefIds[0];
+        // const query = this.debugQuery
+        // query.params.refId = external_ref_id
+        // const names = this.phenix.getRepresentationNames(query)
+        // console.log("rep names:",names)
+        // console.log(this.phenixState.references[external_ref_id].data)
+        // this.phenixState.references[external_ref_id].data.style.representation = names
+        this.phenix.syncAll()
     }
 
 
@@ -131,23 +163,50 @@ export namespace Phenix {
     export function setState(this: Viewer, stateJSON: string) {
         this.phenixState = JSON.parse(stateJSON);
     }
+
+    export function syncReferences(this: Viewer){
+      // const result = { ...this.phenixState };
+      // const references = result.references;
+      // for (const refId in references) {
+      //     if (references.hasOwnProperty(refId)) {
+      //         const ref = references[refId];
+      //         // Submit the id to fetchExternalId function and wait for the result
+      //         if (this.refMapping.hasRefId(ref.id)){
+      //           const externalId = this.refMapping.retrieveRefId(ref.id);
+      //           // Set the result in external_ids under the key "Molstar"
+      //           ref.external_ids["molstar"] = externalId;
+      //         }
+
+      //     }}
+      // this.phenixState = result
+    }
+
+    // export function syncStyle(this: Viewer){
+    //   const result = { ...this.phenixState };
+    //   const references = result.references;
+
+    //   // Update representations
+    //   // Check if references exist and are not an empty object
+    //     for (const refId in references) {
+    //       if (references.hasOwnProperty(refId)) {
+    //         const ref = references[refId];
+
+    //         ref.style.representation = this.phenix.getRepresentationNames(ref.id);
+    //           }
+    //         }
+    //   this.phenixState = result;
+    //       }
+
+    export function syncAll(this: Viewer){
+      //this.phenix.syncReferences()
+      //this.phenix.syncStyle()
+      //this.phenixState.has_synced = true
+
+    }
     export function getState(this: Viewer) {
-
-        // if (this.hasVolumes && !this.phenix.volumeRefInfo().params.values.entries) { this.hasSynced = false; }
-        // let volumeData = {};
-        // if (this.hasVolumes) {
-        //     const volumeEntries = JSON.stringify(this.phenix.volumeRefInfo().params.values.entries);
-        //     if (volumeEntries) { volumeData = volumeEntries; };
-        //     console.log('volumeData: ', volumeData);
-        // }
-        // const result = { ...this.phenixState, hasSynced: this.hasSynced, refMapping: JSON.stringify(this.refMapping.molstarToExternal), volumeEntries: JSON.stringify(volumeData) };
-        // result.hasSynced = this.hasSynced
-
-        const result = { ...this.phenixState };
-        // @ts-ignore
-        result.hasSynced = this.hasSynced;
-        // if (this.hasSynced) { this.hasSynced = false; } // flip the sync toggle
-        return JSON.stringify(result);
+        // // @ts-ignore
+        // result.hasSynced = this.hasSynced;
+        return JSON.stringify(this.phenixState);
 
     }
 
@@ -424,54 +483,72 @@ export namespace Phenix {
         themeValues.action.params = { color: this.phenix.normalizeColor(value), opacity: 1 };
         await this.plugin.managers.structure.component.applyTheme(themeValues, [structureData]);
     }
-    export function getRepresentationNames(this: Viewer, query: SelectionQuery) {
-        const ref = this.refMapping.retrieveRef(query.params.refId);
-        const structure = this.phenix.getStructureForRef(ref);
-        const names = structure.components[0].representations.map((rep: any) => rep.cell.params.values.type.name);
-        return names;
-    }
 
-    export async function getRepresentation(this: Viewer, query: SelectionQuery, representation_name: string, strict: boolean) {
+
+
+//     export function getAllRepresentations(this: Viewer, refId: string) {
+//       const ref = this.refMapping.retrieveRef(refId);
+//       const structure = this.phenix.getStructureForRef(ref);
+//       const reprs = structure.components.flatMap((component: any) =>
+//         component.representations.filter((rep: any) =>
+//     rep?.cell?.params?.values?.type?.name === representation_name
+//   )
+// );
+//   }
+
+
+//     export function getRepresentationNames(this: Viewer, refId: string) {
+//         const ref = this.refMapping.retrieveRef(refId);
+//         const structure = this.phenix.getStructureForRef(ref);
+//         const names = structure.components.flatMap((component: any) =>
+//   component.representations.map((rep: any) => rep.cell.params.values.type.name)
+// );
+//         return names;
+//     }
+
+    export async function getRepresentation(this: Viewer, query: SelectionQuery, representation_name: string, component_key: string, strict: boolean) {
         if (!strict) { strict = false; };
         const ref = this.refMapping.retrieveRef(query.params.refId);
         const structure = this.phenix.getStructureForRef(ref);
-        const names = this.phenix.getRepresentationNames(query);
-        const reprs = structure.components[0].representations.filter((rep: any) =>rep.cell.params.values.type.name === representation_name);
-        if (reprs.length !== 1 && !strict) {
-            await this.phenix.addRepr(query, representation_name);
-            return this.phenix.getRepresentation(query, representation_name, true);
-        } else if (reprs.length !== 1 && strict) {
-            throw new Error(`Expected representation array that matches name '${representation_name}' to be size 1, but names: ${names}`);
-        } else {
-            return reprs[0];
-        }
+        //const names = this.phenix.getRepresentationNames(query.params.refId);
+
+        const reprs = structure.components.flatMap((component: any) =>
+        (component_key === "all" || component.key === component_key) ? // Check if component_key is 'all' or matches the component's key
+          component.representations.filter((rep: any) =>
+            (representation_name === "all" || rep?.cell?.params?.values?.type?.name === representation_name) // Check if representation_name is 'all' or matches the representation's name
+          ) : []
+        );
+        return reprs
     }
 
 
-    export async function setTransparencyFromQuery(this: Viewer, query: SelectionQuery, representation_name: string, value: number) {
+    export async function setTransparencyFromQuery(this: Viewer, query: SelectionQuery, representation_name: string,component_key:string, value: number) {
         // reference: https://github.com/molstar/molstar/issues/149
         const ref = this.refMapping.retrieveRef(query.params.refId);
-        const structure = this.phenix.getStructureForRef(ref);
-        const representation = await this.phenix.getRepresentation(query, representation_name);
-        const repr = representation.cell;
         if (ref) {
-            const data = (this.plugin.state.data.select(ref.molstarRefId)[0].obj as PluginStateObject.Molecule.Structure).data;
-            const sel = QueryHelper.getSelFromQuery(query, data);
-            // @ts-ignore
+          const structure = this.phenix.getStructureForRef(ref);
 
-            const { selection } = StructureQueryHelper.createAndRun(structure.cell.obj!.data.root, sel);
-            const bundle = StructureElement.Bundle.fromSelection(selection);
+          const representations = await this.phenix.getRepresentation(query, representation_name, component_key);
+          for (const representation of representations) {
+            if (representation){
+              const repr = representation.cell;
 
-            const update = this.plugin.build();
+                const data = (this.plugin.state.data.select(ref.molstarRefId)[0].obj as PluginStateObject.Molecule.Structure).data;
+                const sel = QueryHelper.getSelFromQuery(query, data);
+                // @ts-ignore
+                const { selection } = StructureQueryHelper.createAndRun(structure.cell.obj!.data.root, sel);
+                const bundle = StructureElement.Bundle.fromSelection(selection);
 
-            // if you have more than one repr to apply this to, do this for each of them
-            update.to(repr).apply(StateTransforms.Representation.TransparencyStructureRepresentation3DFromBundle, {
-                layers: [{ bundle, value: value }]
-            });
+                const update = this.plugin.build();
 
-            return update.commit();
-        }
-    }
+                // if you have more than one repr to apply this to, do this for each of them
+                update.to(repr).apply(StateTransforms.Representation.TransparencyStructureRepresentation3DFromBundle, {
+                    layers: [{ bundle, value: value }]
+                });
+
+                return update.commit();
+          }
+    }}}
     export function toggleSelectionMode(this: Viewer, isVisible: boolean) {
         if (!isVisible) {
             // console.log('Clearing selection');

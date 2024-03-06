@@ -35,12 +35,14 @@ export const locationAttrs: { [key: string]: (loc: Location) => any } = {
     'auth_asym_id': StructureProperties.chain.auth_asym_id,
     'label_asym_id': StructureProperties.chain.label_asym_id,
     'auth_comp_id': StructureProperties.atom.auth_comp_id,
+    'label_alt_id': StructureProperties.atom.label_alt_id,
     'label_comp_id': StructureProperties.atom.label_comp_id,
     'auth_seq_id': StructureProperties.residue.auth_seq_id,
     'label_seq_id': StructureProperties.residue.label_seq_id,
     'auth_atom_id': StructureProperties.atom.auth_atom_id,
     // 'id': StructureProperties.atom.id,
 };
+
 export function queryFromLoci(loci: Loci): SelectionQuery {
     const locations = getLocationArray(loci);
     const selections = locations.map((loc: Location) => {
@@ -60,6 +62,48 @@ export function queryFromLoci(loci: Loci): SelectionQuery {
         params: { auth_label_pref: 'auth', refId: '' }
     };
 }
+
+// 'Dataclasses'
+export interface PhenixState {
+  references:  { [key: string]:PhenixReference };
+  has_synced: false | boolean;
+}
+
+export class PhenixStateClass implements PhenixState {
+  references: { [key: string]: PhenixReference } = {};
+  has_synced: false | boolean = false;
+}
+
+export interface PhenixReference {
+  id_molstar: string | boolean;
+  id_viewer: string | boolean;
+  structures: PhenixStructure[]
+}
+
+export class PhenixReferenceClass implements PhenixReference {
+  id_molstar: "" | string = "";
+  id_viewer: "" | string = "";
+  structures: PhenixStructure[] = [];
+}
+
+export interface PhenixStructure {
+  components: PhenixComponent[];
+}
+export class PhenixStructureClass implements PhenixStructure {
+  components: PhenixComponent[] = [];
+}
+export interface PhenixComponent {
+  key: string | boolean;
+  representations: string[];
+}
+export class PhenixComponentClass implements PhenixComponent {
+  key: "" | string = "";
+  representations: string[] = [];
+}
+
+// End 'Dataclasses'
+
+
 
 export class RefMap {
     molstarToExternal: { [key: string]: string } = {};
@@ -100,6 +144,7 @@ export class RefMap {
         return JSON.stringify(this.molstarToExternal);
     }
 };
+
 
 export type Ref = {
     molstarRefId: string,
@@ -168,25 +213,53 @@ export const debugQuery: SelectionQuery = {
     }
 };
 
+// Mark style query for deletion
+// type RepresentationString = 'ball-and-stick' | 'cartoon';
+// export type StyleQuery = {
+//     refId: string,
+//     query: SelectionQuery,
+//     color: string,
+//     representation: RepresentationString[],
+//     focus: boolean,
+//     visible: boolean,
+// };
 
-type RepresentationString = 'ball-and-stick' | 'cartoon';
-export type StyleQuery = {
-    refId: string,
-    query: SelectionQuery,
-    color: string,
-    representation: RepresentationString[],
-    focus: boolean,
-    visible: boolean,
-};
+// export const DefaultStyle: StyleQuery = {
+//     refId: '',
+//     query: allSelectionQuery,
+//     color: '#ff2a31',
+//     representation: ['ball-and-stick', 'cartoon'],
+//     focus: false,
+//     visible: true,
+// };
 
-export const DefaultStyle: StyleQuery = {
-    refId: '',
-    query: allSelectionQuery,
-    color: '#ff2a31',
-    representation: ['ball-and-stick', 'cartoon'],
-    focus: false,
-    visible: true,
-};
+interface Style {
+  iso: number | null;
+  color_theme: string | null;
+  opacity: number | null;
+  representation: string[]; // Assuming it can only be 'ball-and-stick' or 'cartoon'
+  visible: boolean | null;
+  color: string | null;
+}
+
+export class StyleClass implements Style {
+  iso: number | null;
+  color_theme: string | null;
+  opacity: number | null;
+  representation: string[];
+  visible: boolean | null;
+  color: string | null;
+
+  constructor() {
+    // Initialize with default values
+    this.iso = null;
+    this.color_theme = null;
+    this.opacity = null;
+    this.representation = []; // Default empty, assuming caller will populate
+    this.visible = null;
+    this.color = null; // Corrected to `string | null` to match the interface
+  }
+}
 
 export namespace QueryHelper {
 
