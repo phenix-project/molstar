@@ -21,7 +21,6 @@ import { BuiltInTrajectoryFormat } from '../../mol-plugin-state/formats/trajecto
 import { BuildInVolumeFormat } from '../../mol-plugin-state/formats/volume';
 import { createVolumeRepresentationParams } from '../../mol-plugin-state/helpers/volume-representation-params';
 import { PluginStateObject } from '../../mol-plugin-state/objects';
-import { StateTransforms } from '../../mol-plugin-state/transforms';
 import { TrajectoryFromModelAndCoordinates } from '../../mol-plugin-state/transforms/model';
 import { createPluginUI } from '../../mol-plugin-ui/react18';
 import { PluginUIContext } from '../../mol-plugin-ui/context';
@@ -30,7 +29,7 @@ import { PluginCommands } from '../../mol-plugin/commands';
 import { PluginConfig } from '../../mol-plugin/config';
 import { PluginLayoutControlsDisplay } from '../../mol-plugin/layout';
 import { PluginState } from '../../mol-plugin/state';
-import { StateObjectRef, StateObjectSelector } from '../../mol-state';
+import { StateObjectRef} from '../../mol-state';
 import { Asset } from '../../mol-util/assets';
 import { Color } from '../../mol-util/color';
 import '../../mol-util/polyfill';
@@ -39,13 +38,20 @@ import { SaccharideCompIdMapType } from '../../mol-model/structure/structure/car
 import { SbNcbrPartialChargesPreset, SbNcbrPartialChargesPropertyProvider } from '../../extensions/sb-ncbr';
 
 // Start import modifications
-import { debugQuery, RefMap, stringDictionary, PhenixStateClass } from './helpers';
-import { StructureElement, StructureProperties as Props, StructureProperties } from '../../mol-model/structure';
+import { MolScriptBuilder as MS} from '../../mol-script/language/builder';
+import {  StructureSelectionQuery, StructureSelectionQueries } from '../../mol-plugin-state/helpers/structure-selection-query'
+import { TwoWayDictionary, PhenixStateClass } from './helpers';
+import { StructureProperties as Props, StructureProperties } from '../../mol-model/structure';
 import { VolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/behavior';
 import { StateSelection } from '../../mol-state';
 import { StructureComponentManager } from '../../mol-plugin-state/manager/structure/component';
 import { ParamDefinition } from '../../mol-util/param-definition';
+import { StructureElement, StructureQuery } from '../../mol-model/structure';
+import { StructureQueryHelper } from '../../mol-plugin-state/helpers/structure-query';
+import { StateTransforms } from '../../mol-plugin-state/transforms';
+import { StateBuilder, StateObjectSelector } from '../../mol-state';
 import { Phenix } from './phenix';
+import { StructureRepresentation3D } from '../../mol-plugin-state/transforms/representation';
 import { CreateVolumeStreamingBehavior, InitVolumeStreaming } from '../../mol-plugin/behavior/dynamic/volume-streaming/transformers';
 // End import modifications
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
@@ -54,6 +60,9 @@ export { setDebugMode, setProductionMode, setTimingMode, consoleStats } from '..
 const CustomFormats = [
     ['g3d', G3dProvider] as const
 ];
+import { PluginContext } from '../../mol-plugin/context';
+
+
 
 export const ExtensionMap = {
     // 'volseg': PluginSpec.Behavior(Volseg),
@@ -119,6 +128,9 @@ export class Viewer {
     StructureElement = StructureElement;
     StructureProperties = StructureProperties;
     StructureComponentManager = StructureComponentManager;
+    StructureSelectionQuery = StructureSelectionQuery;
+    StructureSelectionQueries = StructureSelectionQueries;
+    StructureQueryHelper = StructureQueryHelper
     ParamDefinition = ParamDefinition;
     VolumeStreaming = VolumeStreaming;
     CreateVolumeStreamingBehavior = CreateVolumeStreamingBehavior;
@@ -126,17 +138,28 @@ export class Viewer {
     InitVolumeStreaming = InitVolumeStreaming;
     // Instance variables
     selectedParams: any;
-    debugQuery = debugQuery;
+    //debugQuery = debugQuery;
     isHighlightColorUpdated: boolean;
-    refMapping = new RefMap();
-    refMapping_data = new RefMap();
-    refMapping_volume: stringDictionary = {};
+    objectStoragePhenix = new TwoWayDictionary<string, any>(); // phenixKey: DataClass JSON serializable object
+    objectStorageMolstar = new TwoWayDictionary<string, any>(); // molstarKey: molstar internal object
+    keyMapPhenixToMolstar = new TwoWayDictionary<string, string>(); // phenixKey: molstarKey
     defaultRendererProps: any;
     volumeServerURL: string;
     hasSynced = false;
     hasVolumes = false;
     isFocused = false;
     phenixState = new PhenixStateClass();
+    currentSelExpression: any;
+    StateObjectSelector = StateObjectSelector;
+    MS = MS;
+    StructureRepresentation3D = StructureRepresentation3D;
+    Color = Color;
+    PluginContext = PluginContext;
+    StateBuilder = StateBuilder;
+
+    PluginCommands = PluginCommands;
+    StateTransforms = StateTransforms;
+    StructureQuery = StructureQuery;
 
     constructor(public plugin: PluginUIContext) {
         // Save renderer defaults
@@ -147,46 +170,61 @@ export class Viewer {
     phenix = {
         cameraMode: Phenix.cameraMode.bind(this),
         postInit: Phenix.postInit.bind(this),
-        getLociForParams: Phenix.getLociForParams.bind(this),
+        // getLociForParams: Phenix.getLociForParams.bind(this),
         loadStructureFromPdbString: Phenix.loadStructureFromPdbString.bind(this),
         pollStructures: Phenix.pollStructures.bind(this),
+        generateUniqueKey: Phenix.generateUniqueKey.bind(this),
         getState: Phenix.getState.bind(this),
         setState: Phenix.setState.bind(this),
-        queryFromJSON: Phenix.queryFromJSON.bind(this),
-        getQueryFromLoci: Phenix.getQueryFromLoci.bind(this),
-        getQueryJSONFromLoci: Phenix.getQueryJSONFromLoci.bind(this),
+        // getQueryFromLoci: Phenix.getQueryFromLoci.bind(this),
+        updateFromExternal: Phenix.updateFromExternal.bind(this),
+        //getQueryJSONFromLoci: Phenix.getQueryJSONFromLoci.bind(this),
         getSel: Phenix.getSel.bind(this),
         pollSelection: Phenix.pollSelection.bind(this),
+        focusSelected: Phenix.focusSelected.bind(this),
         toggleSelectionMode: Phenix.toggleSelectionMode.bind(this),
-        select: Phenix.select.bind(this),
-        setColor: Phenix.setColor.bind(this),
+        // select: Phenix.select.bind(this),
+        //setColor: Phenix.setColor.bind(this),
+        colorSelection: Phenix.colorSelection.bind(this),
+        //setColorSelected: Phenix.setColorSelected.bind(this),
+        queryAll: Phenix.queryAll.bind(this),
+        selectAll: Phenix.selectAll.bind(this),
+       //queryCurrent: Phenix.queryCurrent.bind(this),
+        //setCurrentSelExpression: Phenix.setCurrentSelExpression.bind(this),
         deselectAll: Phenix.deselectAll.bind(this),
         clearSelection: Phenix.clearSelection.bind(this),
         clearAll: Phenix.clearAll.bind(this),
-        getColorOfSelection: Phenix.getColorOfSelection.bind(this),
-        setQueryColor: Phenix.setQueryColor.bind(this),
+        // getColorOfSelection: Phenix.getColorOfSelection.bind(this),
+        // setQueryColor: Phenix.setQueryColor.bind(this),
         normalizeColor: Phenix.normalizeColor.bind(this),
-        getQueryAll: Phenix.getQueryAll.bind(this),
-        getQueryDebug: Phenix.getQueryDebug.bind(this),
+        // getQueryAll: Phenix.getQueryAll.bind(this),
+        debugLoadModel: Phenix.debugLoadModel.bind(this),
+        debugQuery: Phenix.debugQuery.bind(this),
         getThemeParams: Phenix.getThemeParams.bind(this),
-        addRepr: Phenix.addRepr.bind(this),
-        removeRepr: Phenix.removeRepr.bind(this),
+        addRepresentationSelected: Phenix.addRepresentationSelected.bind(this),
+        //removeRepresentationSelected: Phenix.removeRepresentationSelected.bind(this),
+        //getRepresentation: Phenix.getRepresentation.bind(this),
+        //removeRepr: Phenix.removeRepr.bind(this),
         checkSingleEntry: Phenix.checkSingleEntry.bind(this),
         getStructureForRef: Phenix.getStructureForRef.bind(this),
         getSelectedLoci: Phenix.getSelectedLoci.bind(this),
-        getSelectedQuery: Phenix.getSelectedQuery.bind(this),
+        getSelectedStructure: Phenix.getSelectedStructure.bind(this),
+        queryFromExpression: Phenix.queryFromExpression.bind(this),
+        selectFromQuery: Phenix.selectFromQuery.bind(this),
+        selectFromSel: Phenix.selectFromSel.bind(this),
+        // queryFromJSON: Phenix.queryFromJSON.bind(this),
+
+        // getSelectedQuery: Phenix.getSelectedQuery.bind(this),
         getLocations: Phenix.getLocations.bind(this),
         getLociStats: Phenix.getLociStats.bind(this),
         //getAllRepresentations: Phenix.getAllRepresentations.bind(this),
-        //getRepresentationNames: Phenix.getRepresentationNames.bind(this),
-        getRepresentation: Phenix.getRepresentation.bind(this),
-        setTransparencyFromQuery: Phenix.setTransparencyFromQuery.bind(this),
+        // getRepresentation: Phenix.getRepresentation.bind(this),
+        setTransparencyQuery: Phenix.setTransparencyQuery.bind(this),
+        //setTransparencySelected: Phenix.setTransparencySelected.bind(this),
         volumeRefBehavior: Phenix.volumeRefBehavior.bind(this),
         volumeRefInfo: Phenix.volumeRefInfo.bind(this),
         getVolumeEntry: Phenix.getVolumeEntry.bind(this),
         loadMap: Phenix.loadMap.bind(this),
-        //
-        syncAll: Phenix.syncAll.bind(this),
         syncReferences: Phenix.syncReferences.bind(this),
         //syncStyle: Phenix.syncStyle.bind(this),
 
