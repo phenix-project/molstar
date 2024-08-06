@@ -136,7 +136,8 @@ const FeatureProviders = [
     MetalProvider, MetalBindingProvider,
 ];
 
-const ContactProviders = {
+// @ts-ignore
+const DummyProviders = {
     'ionic': IonicProvider,
     'pi-stacking': PiStackingProvider,
     'cation-pi': CationPiProvider,
@@ -145,6 +146,16 @@ const ContactProviders = {
     'weak-hydrogen-bonds': WeakHydrogenBondsProvider,
     'hydrophobic': HydrophobicProvider,
     'metal-coordination': MetalCoordinationProvider,
+};
+const ContactProviders = {
+    // 'ionic': IonicProvider,
+    // 'pi-stacking': PiStackingProvider,
+    // 'cation-pi': CationPiProvider,
+    // 'halogen-bonds': HalogenBondsProvider,
+    // 'hydrogen-bonds': HydrogenBondsProvider,
+    // 'weak-hydrogen-bonds': WeakHydrogenBondsProvider,
+    // 'hydrophobic': HydrophobicProvider,
+    // 'metal-coordination': MetalCoordinationProvider,
 };
 type ContactProviders = typeof ContactProviders
 
@@ -156,6 +167,7 @@ function getProvidersParams(defaultOn: string[] = []) {
 
     Object.keys(ContactProviders).forEach(k => {
         (params as any)[k] = PD.MappedStatic(defaultOn.includes(k) ? 'on' : 'off', {
+            // @ts-ignore
             on: PD.Group(ContactProviders[k as keyof ContactProviders].params),
             off: PD.Group({})
         }, { cycle: true });
@@ -188,6 +200,7 @@ export async function computeInteractions(ctx: CustomProperty.Context, structure
     ObjectKeys(ContactProviders).forEach(k => {
         const { name, params } = p.providers[k];
         if (name === 'on') {
+            // @ts-ignore
             contactTesters.push(ContactProviders[k].createTester(params as any));
         }
     });

@@ -276,8 +276,8 @@ export namespace Phenix {
         return JSON.stringify(refs);
     }
 
-    export function setState(this: Viewer, stateJSON: string) {
-        this.phenixState = JSON.parse(stateJSON);
+    export function setState(this: Viewer) {
+        this.phenixState.has_synced = true
     }
 
     export function syncReferences(this: Viewer){
